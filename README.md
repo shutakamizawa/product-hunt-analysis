@@ -1,5 +1,106 @@
 # Product Hunt Fetcher
 
+(日本語は英語の後に続きます)
+
+## Overview
+
+Product Hunt Fetcher is a Python script that utilizes the Product Hunt API to retrieve the latest post data and save it as a CSV file. For detailed information on the available data, refer to the [GraphQL Schema](https://github.com/producthunt/producthunt-api/blob/master/schema.graphql).
+
+## Setup
+
+### Prerequisites
+
+- Python 3.7 or higher
+- pip
+
+### Installation
+
+1. **Clone the repository**
+
+   ```bash
+   git clone https://github.com/yourusername/product-hunt-fetcher.git
+   cd product-hunt-fetcher
+   ```
+
+2. **Create and activate a virtual environment**
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
+   ```
+3. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. **Create a .env file and set your Product Hunt API key**
+   ```bash
+   PRODUCT_HUNT_API_KEY=your_api_key_here
+   ```
+
+## Usage
+
+### Fetching Data
+
+Run the script to fetch data from Product Hunt and save it to `posts.csv`.
+
+```bash
+python fetch_data.py
+```
+
+### Data Analysis
+
+Use `analyze_data.py` to perform analysis on the retrieved data.
+
+```bash
+python analyze_data.py
+```
+
+#### Analysis Features
+
+1. **Basic Statistics**
+
+   - Analysis of the overall ratio of featured posts
+   - Analysis of featured ratios by category
+
+2. **Media Analysis**
+
+   - Correlation between the number of images and featured status
+   - Relationship between the presence of videos and featured status
+
+3. **Category Analysis**
+
+   - Detailed analysis of the top 10 categories
+   - Feature analysis by category
+
+4. **Time Series Analysis**
+
+   - Analysis of the number of posts and featured rates by day of the week
+
+#### Statistical Methods
+
+- Chi-Square Test
+- t-Test
+- Mann-Whitney U Test
+- Logistic Regression Analysis
+- Odds Ratio Analysis
+
+#### Visualization
+
+- Bar Charts
+- Box Plots
+- Histograms
+- Stacked Bar Charts
+- Dual Axis Plots
+
+### Configuring Parameters
+
+Within `fetch_data.py`, you can configure the following parameters:
+
+- `TOTAL_POSTS`: Maximum number of posts to retrieve (default: 1000)
+- `BATCH_SIZE`: Number of posts to retrieve per API request (default: 50)
+- `SLEEP_TIME`: Waiting time in seconds between each request (default: 4)
+
+The script can fetch up to 1,260 posts per run and will wait for 10 minutes (600 seconds) if the rate limit is reached before continuing. Modify the relevant sections in the script as needed.
+
 ## 概要
 
 Product Hunt の API を使用して最新の投稿データを取得し、CSV ファイルとして保存する Python スクリプトです。取得できるデータの詳細については、[GraphQL スキーマ](https://github.com/producthunt/producthunt-api/blob/master/schema.graphql)を参照してください。
@@ -111,7 +212,3 @@ python analyze_data.py
 
 - API リクエストの失敗時やレートリミットに達した場合、スクリプトは指定されたスリープ時間後にリトライします。
 - 環境変数 `PRODUCT_HUNT_API_KEY` が設定されていない場合、スクリプトはエラーを投げて終了します。
-
-```
-
-```
