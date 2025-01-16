@@ -9,31 +9,39 @@ from statsmodels.stats.contingency_tables import Table2x2
 
 def load_data(csv_file_path):
     """
+    Load a CSV file and return a DataFrame.
     CSVファイルを読み込み、DataFrameを返す。
     """
     try:
         df = pd.read_csv(csv_file_path)
-        print("データの読み込みに成功しました。")
+        print("Successfully loaded the data. データの読み込みに成功しました。")
         return df
     except FileNotFoundError:
-        print(f"エラー: ファイル '{csv_file_path}' が見つかりません。")
+        print(
+            f"Error: File '{csv_file_path}' not found. エラー: ファイル '{csv_file_path}' が見つかりません。"
+        )
         exit(1)
     except pd.errors.ParserError:
-        print(f"エラー: ファイル '{csv_file_path}' の解析中にエラーが発生しました。")
+        print(
+            f"Error: Failed to parse the file '{csv_file_path}'. エラー: ファイル '{csv_file_path}' の解析中にエラーが発生しました。"
+        )
         exit(1)
 
 
 def preprocess_data(df):
     """
+    Preprocess the data:
+    - Convert 'featured' and 'hasVideo' to boolean type.
+    - Convert 'createdAt' and 'featuredAt' to datetime type (if they exist).
     データの前処理:
     - 'featured' と 'hasVideo' をブール型に変換。
     - 'createdAt', 'featuredAt' を日時型に変換(存在する場合)。
     """
-    # featured, hasVideo を bool へ
+    # Convert featured and hasVideo to bool
     df["featured"] = df["featured"].astype(bool)
     df["hasVideo"] = df["hasVideo"].astype(bool)
 
-    # createdAt, featuredAt を datetime へ
+    # Convert createdAt and featuredAt to datetime
     df["createdAt"] = pd.to_datetime(df["createdAt"], errors="coerce")
     if "featuredAt" in df.columns:
         df["featuredAt"] = pd.to_datetime(df["featuredAt"], errors="coerce")
@@ -43,12 +51,17 @@ def preprocess_data(df):
 
 def analyze_feature_ratio(df):
     """
-    1. 全体の Featured 比率
+    1. Overall Featured Ratio
+    全体のFeatured比率
     """
     total_items = len(df)
     featured_items = df["featured"].sum()
     print("\n--- Overall Featured Ratio ---")
-    print(f"Total items: {total_items}")
+    print("全体のFeatured比率 ---")
+    print(f"Total items: {total_items} 件")
+    print(
+        f"Featured items: {featured_items} ({featured_items / total_items * 100:.2f}%)"
+    )
     print(
         f"Featured items: {featured_items} ({featured_items / total_items * 100:.2f}%)"
     )
@@ -60,15 +73,19 @@ def analyze_top10_categories_feature_ratio(df):
     Categories are sorted by the total number of posts in descending order.
     Additionally, displays the total number of posts per category on the plot
     and sets the y-axis limit to 20%.
+
+    トップ10の人気カテゴリーにおけるFeatured比率を分析・可視化します。
+    カテゴリーは投稿数の多い順にソートされています。
+    また、プロット上に各カテゴリーの投稿総数を表示し、y軸の上限を20%に設定します。
     """
-    # 記事数が多いトップ10カテゴリを取得
+    # Get the top 10 categories by number of posts
     category_counts = df["category"].value_counts().nlargest(10)
     top10_categories = category_counts.index.tolist()
 
-    # トップ10カテゴリにフィルタリング
+    # Filter for top 10 categories
     top10_df = df[df["category"].isin(top10_categories)]
 
-    # カテゴリごとのFeatured割合を計算
+    # Calculate featured ratio per category
     category_stats = (
         top10_df.groupby(["category", "featured"]).size().unstack(fill_value=0)
     )
@@ -80,14 +97,15 @@ def analyze_top10_categories_feature_ratio(df):
     else:
         category_stats["Featured %"] = 0
 
-    # Totalで降順にソート
+    # Sort by Total in descending order
     category_stats = category_stats.sort_values(by="Total", ascending=False)
 
     print("\n--- Featured Ratio by Top 10 Categories ---")
+    print("トップ10カテゴリーごとのFeatured比率 ---")
     print(category_stats[["Total", True, False, "Featured %"]])
 
-    # 可視化: トップ10カテゴリのFeatured割合の棒グラフ
-    plt.figure(figsize=(18, 12))  # フィギュアサイズを大きく設定
+    # Visualization: Bar chart of Featured ratio for top 10 categories
+    plt.figure(figsize=(18, 12))  # Increase figure size
     sns.barplot(
         x=category_stats.index,
         y="Featured %",
@@ -97,26 +115,26 @@ def analyze_top10_categories_feature_ratio(df):
     )
     plt.title(
         "Featured Ratio by Top 10 Popular Categories", fontsize=24
-    )  # タイトルフォントサイズを大きく
-    plt.ylabel("Featured %", fontsize=18)  # y軸ラベルフォントサイズを大きく
-    plt.xlabel("Category", fontsize=18)  # x軸ラベルフォントサイズを大きく
+    )  # Increase title font size
+    plt.ylabel("Featured %", fontsize=18)  # Increase y-axis label font size
+    plt.xlabel("Category", fontsize=18)  # Increase x-axis label font size
     plt.xticks(
         rotation=45, ha="right", fontsize=16
-    )  # x軸目盛りラベルフォントサイズを大きく
-    plt.yticks(fontsize=16)  # y軸目盛りラベルフォントサイズを大きく
-    plt.ylim(0, 20)  # y軸の上限を20%に設定
+    )  # Increase x-axis tick label font size
+    plt.yticks(fontsize=16)  # Increase y-axis tick label font size
+    plt.ylim(0, 20)  # Set y-axis upper limit to 20%
 
-    # 棒の上にパーセンテージと総数を表示
+    # Display percentage and total number above bars
     for index, (feature_pct, total) in enumerate(
         zip(category_stats["Featured %"], category_stats["Total"])
     ):
         plt.text(
             index,
-            feature_pct + 0.5,  # 棒の上に少し離して表示
-            f"{feature_pct:.1f}%\n(n={total})",  # パーセンテージと総数を表示
+            feature_pct + 0.5,  # Slightly above the bar
+            f"{feature_pct:.1f}%\n(n={total})",  # Display percentage and total
             ha="center",
             va="bottom",
-            fontsize=20,  # 注釈のフォントサイズを大きく
+            fontsize=20,  # Increase annotation font size
             color="black",
         )
 
@@ -128,12 +146,16 @@ def analyze_image_influence(df):
     """
     3. Analyze the relationship between the number of images and the Featured status.
        Visualize and summarize how imageCount differs between Featured and Non-Featured.
+
+    画像数とFeaturedステータスの関係を分析します。
+    FeaturedとNon-Featured間でimageCountがどのように異なるかを可視化・要約します。
     """
     # Summary statistics
     image_stats = df.groupby("featured")["imageCount"].agg(
         ["count", "mean", "median", "std"]
     )
     print("\n--- Image Count Statistics by Featured Status ---")
+    print("Featuredステータス別の画像数統計 ---")
     print(image_stats)
 
     # Visualization: Boxplot of imageCount by Featured status
@@ -177,8 +199,10 @@ def analyze_image_influence(df):
 def analyze_video_influence_improved(df):
     """
     4. Analyze and visualize the relationship between the presence of video and the Featured status.
+
+    動画の有無とFeaturedステータスの関係を分析・可視化します。
     """
-    # クロス集計: FeaturedとhasVideo
+    # Cross-tabulation: Featured and hasVideo
     video_crosstab = pd.crosstab(
         df["featured"], df["hasVideo"], margins=True, margins_name="Total"
     )
@@ -190,9 +214,10 @@ def analyze_video_influence_improved(df):
     )
 
     print("\n--- Cross Tabulation: Video Presence and Featured Status ---")
+    print("動画の有無とFeaturedステータスのクロス集計 ---")
     print(video_crosstab)
 
-    # パーセンテージの計算
+    # Calculate percentages
     video_percentage = (
         pd.crosstab(df["featured"], df["hasVideo"], normalize="index") * 100
     )
@@ -204,21 +229,22 @@ def analyze_video_influence_improved(df):
     )
 
     print("\n--- Percentage: Video Presence by Featured Status ---")
+    print("Featuredステータス別の動画有無のパーセンテージ ---")
     print(video_percentage)
 
-    # 可視化: 100%積み上げ棒グラフ
+    # Visualization: 100% Stacked Bar Chart
     # -------------------------------
-    # データの準備
+    # Data preparation
     video_percentage = video_percentage.reset_index()
 
-    # プロットの準備
+    # Plot preparation
     plt.figure(figsize=(8, 6))
 
-    # 各カテゴリーの位置を決定
+    # Positions for each category
     bar_width = 0.6
     indices = range(len(video_percentage))
 
-    # 'Has Video (%)' のバーをプロット (下部)
+    # Plot 'Has Video (%)' bars (bottom layer)
     plt.bar(
         indices,
         video_percentage["Has Video (%)"],
@@ -227,7 +253,7 @@ def analyze_video_influence_improved(df):
         color="salmon",
     )
 
-    # 'No Video (%)' のバーを 'Has Video (%)' の上に積み上げてプロット
+    # Plot 'No Video (%)' bars stacked on top
     plt.bar(
         indices,
         video_percentage["No Video (%)"],
@@ -237,9 +263,9 @@ def analyze_video_influence_improved(df):
         color="skyblue",
     )
 
-    # 数値ラベルの追加
+    # Add numerical labels
     for i in indices:
-        # 'Has Video (%)' の数値ラベル
+        # Label for 'Has Video (%)'
         plt.text(
             i,
             video_percentage["Has Video (%)"][i] / 2,
@@ -250,7 +276,7 @@ def analyze_video_influence_improved(df):
             fontsize=10,
         )
 
-        # 'No Video (%)' の数値ラベル
+        # Label for 'No Video (%)'
         plt.text(
             i,
             video_percentage["Has Video (%)"][i]
@@ -263,16 +289,18 @@ def analyze_video_influence_improved(df):
             fontweight="bold",
         )
 
-    # 軸のラベルとタイトルを設定
+    # Axis labels and title
     plt.xticks(indices, video_percentage["featured"])
-    plt.xlabel("Featured Status")
-    plt.ylabel("Percentage (%)")
-    plt.title("Video Presence Percentage by Featured Status (100% Stacked)")
+    plt.xlabel("Featured Status", fontsize=14)
+    plt.ylabel("Percentage (%)", fontsize=14)
+    plt.title(
+        "Video Presence Percentage by Featured Status (100% Stacked)", fontsize=16
+    )
 
-    # 凡例を追加
+    # Add legend
     plt.legend(title="Video Presence", loc="upper left")
 
-    # グラフを整える
+    # Adjust layout
     plt.tight_layout()
     plt.show()
 
@@ -280,6 +308,8 @@ def analyze_video_influence_improved(df):
 def analyze_video_feature_association(df):
     """
     Analyze the statistical association between video presence and Featured status.
+
+    動画の有無とFeaturedステータス間の統計的関連性を分析します。
     """
     # Create cross-tabulation
     contingency_table = pd.crosstab(df["hasVideo"], df["featured"])
@@ -287,22 +317,24 @@ def analyze_video_feature_association(df):
     contingency_table.columns = ["Non-Featured", "Featured"]
 
     print("\n--- Cross Tabulation: Video Presence and Featured Status ---")
+    print("動画の有無とFeaturedステータスのクロス集計 ---")
     print(contingency_table)
 
     # Chi-squared test
     chi2, p, dof, expected = chi2_contingency(contingency_table)
     print("\n--- Chi-Squared Test Results ---")
+    print("カイ二乗検定結果 ---")
     print(f"Chi-squared value: {chi2:.4f}")
     print(f"Degrees of freedom: {dof}")
     print(f"P-value: {p:.4f}")
 
     if p < 0.05:
         print(
-            "結論: 動画の有無とFeaturedステータスの間には統計的に有意な関連があります。"
+            "Conclusion: There is a statistically significant association between video presence and Featured status. 動画の有無とFeaturedステータスの間には統計的に有意な関連があります。"
         )
     else:
         print(
-            "結論: 動画の有無とFeaturedステータスの間に統計的に有意な関連はありません。"
+            "Conclusion: There is no statistically significant association between video presence and Featured status. 動画の有無とFeaturedステータスの間に統計的に有意な関連はありません。"
         )
 
     # Calculate Odds Ratio
@@ -315,16 +347,21 @@ def analyze_video_feature_association(df):
         table = Table2x2([[a, b], [c, d]])
         odds_ratio = table.oddsratio
         confint = table.oddsratio_confint()
-        print(f"\nOdds Ratio: {odds_ratio:.4f}")
+        print("\n--- Odds Ratio and 95% Confidence Intervals ---")
+        print("オッズ比と95%信頼区間 ---")
+        print(f"Odds Ratio: {odds_ratio:.4f}")
         print(f"95% Confidence Interval: ({confint[0]:.4f}, {confint[1]:.4f})")
     except Exception as e:
-        print(f"オッズ比の計算中にエラーが発生しました: {e}")
+        print(
+            f"Error calculating odds ratio: {e} オッズ比の計算中にエラーが発生しました: {e}"
+        )
 
     # Visualization: Bar plot of Featured percentage by Video presence
     featured_percent = df.groupby("hasVideo")["featured"].mean() * 100
     featured_percent = featured_percent.rename({False: "No Video", True: "Has Video"})
 
     print("\n--- Featured Percentage by Video Presence ---")
+    print("動画有無別のFeatured割合 ---")
     print(featured_percent)
 
     # Create bar plot
@@ -347,6 +384,8 @@ def analyze_video_feature_association(df):
 def analyze_image_feature_association(df):
     """
     Analyze the statistical association between the number of images and Featured status.
+
+    画像数とFeaturedステータス間の統計的関連性を分析します。
     """
     # Split data into Featured and Non-Featured
     featured = df[df["featured"] == True]["imageCount"]
@@ -360,6 +399,7 @@ def analyze_image_feature_association(df):
     u_stat, p_value_u = mannwhitneyu(featured, non_featured, alternative="two-sided")
 
     print("\n--- Image Count Association with Featured Status ---")
+    print("画像数とFeaturedステータスの関連性 ---")
     print(
         f"Featured Image Count: Mean={featured.mean():.2f}, Median={featured.median():.2f}"
     )
@@ -368,21 +408,27 @@ def analyze_image_feature_association(df):
     )
 
     print("\n--- T-Test Results ---")
+    print("T検定結果 ---")
     print(f"T-statistic: {t_stat:.4f}, P-value: {p_value_t:.4f}")
     if p_value_t < 0.05:
-        print("結論: FeaturedとNon-Featured間で画像数に有意な差があります (T-Test)。")
-    else:
-        print("結論: FeaturedとNon-Featured間で画像数に有意な差はありません (T-Test)。")
-
-    print("\n--- Mann-Whitney U Test Results ---")
-    print(f"U-statistic: {u_stat}, P-value: {p_value_u:.4f}")
-    if p_value_u < 0.05:
         print(
-            "結論: FeaturedとNon-Featured間で画像数に有意な差があります (Mann-Whitney U Test)。"
+            "Conclusion: There is a significant difference in image count between Featured and Non-Featured (T-Test). FeaturedとNon-Featured間で画像数に有意な差があります (T-Test)。"
         )
     else:
         print(
-            "結論: FeaturedとNon-Featured間で画像数に有意な差はありません (Mann-Whitney U Test)。"
+            "Conclusion: There is no significant difference in image count between Featured and Non-Featured (T-Test). FeaturedとNon-Featured間で画像数に有意な差はありません (T-Test)。"
+        )
+
+    print("\n--- Mann-Whitney U Test Results ---")
+    print("Mann-Whitney U検定結果 ---")
+    print(f"U-statistic: {u_stat}, P-value: {p_value_u:.4f}")
+    if p_value_u < 0.05:
+        print(
+            "Conclusion: There is a significant difference in image count between Featured and Non-Featured (Mann-Whitney U Test). FeaturedとNon-Featured間で画像数に有意な差があります (Mann-Whitney U Test)。"
+        )
+    else:
+        print(
+            "Conclusion: There is no significant difference in image count between Featured and Non-Featured (Mann-Whitney U Test). FeaturedとNon-Featured間で画像数に有意な差はありません (Mann-Whitney U Test)。"
         )
 
     # Visualization: Boxplot
@@ -426,11 +472,14 @@ def analyze_image_feature_association(df):
 def analyze_image_feature_association_by_category(df):
     """
     Analyze the statistical association between the number of images and Featured status for each category.
+
+    各カテゴリーにおける画像数とFeaturedステータス間の統計的関連性を分析します。
     """
     categories = df["category"].unique()
     results = []
 
     print("\n--- Image Count Association by Category ---")
+    print("カテゴリー別の画像数関連性分析 ---")
     for category in categories:
         category_df = df[df["category"] == category]
         featured = category_df[category_df["featured"] == True]["imageCount"]
@@ -473,6 +522,7 @@ def analyze_image_feature_association_by_category(df):
     # Display summary of results
     results_df = pd.DataFrame(results)
     print("\n--- Summary of Image Count Association by Category ---")
+    print("カテゴリー別画像数関連性の要約 ---")
     print(results_df)
 
     # Highlight significant categories
@@ -482,14 +532,19 @@ def analyze_image_feature_association_by_category(df):
     ]
     if not significant.empty:
         print("\n--- Categories with Significant Image Count Differences ---")
+        print("有意な画像数差異があるカテゴリー ---")
         print(significant)
     else:
-        print("\nどのカテゴリでも有意な差は見つかりませんでした。")
+        print(
+            "\nNo significant differences found in any category. どのカテゴリでも有意な差は見つかりませんでした。"
+        )
 
 
 def logistic_regression_image_featured(df):
     """
     Perform logistic regression to evaluate the impact of image count on Featured status.
+
+    画像数がFeaturedステータスに与える影響を評価するためにロジスティック回帰を実施します。
     """
     # Select necessary variables
     data = df[["featured", "imageCount"]].dropna()
@@ -506,6 +561,7 @@ def logistic_regression_image_featured(df):
     try:
         result = model.fit(disp=False)
         print("\n--- Logistic Regression Results ---")
+        print("ロジスティック回帰結果 ---")
         print(result.summary())
 
         # Calculate Odds Ratios
@@ -516,14 +572,19 @@ def logistic_regression_image_featured(df):
         odds_ratio = np.exp(conf)
 
         print("\n--- Odds Ratios and 95% Confidence Intervals ---")
+        print("オッズ比と95%信頼区間 ---")
         print(odds_ratio)
     except Exception as e:
-        print(f"ロジスティック回帰中にエラーが発生しました: {e}")
+        print(
+            f"Error during logistic regression: {e} ロジスティック回帰中にエラーが発生しました: {e}"
+        )
 
 
 def logistic_regression_image_featured_multivariate(df):
     """
     Perform multivariate logistic regression to evaluate the impact of image count and other factors on Featured status.
+
+    画像数や他の要因がFeaturedステータスに与える影響を評価するために多変量ロジスティック回帰を実施します。
     """
     # Select necessary variables and convert categorical variables to dummy variables
     data = df[["featured", "hasVideo", "category", "imageCount"]].dropna()
@@ -541,6 +602,7 @@ def logistic_regression_image_featured_multivariate(df):
     try:
         result = model.fit(disp=False)
         print("\n--- Multivariate Logistic Regression Results ---")
+        print("多変量ロジスティック回帰結果 ---")
         print(result.summary())
 
         # Calculate Odds Ratios
@@ -551,19 +613,26 @@ def logistic_regression_image_featured_multivariate(df):
         odds_ratio = np.exp(conf)
 
         print("\n--- Odds Ratios and 95% Confidence Intervals ---")
+        print("オッズ比と95%信頼区間 ---")
         print(odds_ratio)
     except Exception as e:
-        print(f"多変量ロジスティック回帰中にエラーが発生しました: {e}")
+        print(
+            f"Error during multivariate logistic regression: {e} 多変量ロジスティック回帰中にエラーが発生しました: {e}"
+        )
 
 
 def analyze_average_products_and_featured_percentage_per_weekday_dual_axis(df):
     """
     Calculate the average number of products released each day of the week and the percentage of featured products,
     then visualize both metrics using a dual-axis plot with bars for average product count and a line for featured percentage.
+
+    曜日ごとの平均プロダクト数とFeaturedプロダクトの割合を計算し、
+    バーで平均プロダクト数、線でFeatured割合を示すデュアルアクシスプロットで可視化します。
     """
     # Ensure 'createdAt' exists in the DataFrame
     if "createdAt" not in df.columns:
         print("Error: 'createdAt' column does not exist in the DataFrame.")
+        print("エラー: 'createdAt' 列がDataFrameに存在しません。")
         return
 
     # Extract the weekday from 'createdAt'
@@ -617,6 +686,7 @@ def analyze_average_products_and_featured_percentage_per_weekday_dual_axis(df):
     )
 
     print("\n--- Average Number of Products and Featured Percentage per Weekday ---")
+    print("曜日ごとの平均プロダクト数とFeatured割合 ---")
     print(average_df)
 
     # Set up the matplotlib figure and axis
@@ -678,6 +748,10 @@ def analyze_average_products_and_featured_percentage_per_weekday_dual_axis(df):
         "Average Number of Products Released and Featured Percentage per Weekday",
         fontsize=18,
     )
+    plt.title(
+        "曜日ごとの平均プロダクト数とFeatured割合",
+        fontsize=18,
+    )
 
     # Legends
     lines_labels = [ax.get_legend_handles_labels() for ax in [ax1, ax2]]
@@ -701,31 +775,31 @@ def main():
     df = preprocess_data(df)
 
     # ---- Begin Analysis ----
-    # # (1) Overall Featured Ratio
+    # 1. Overall Featured Ratio
     analyze_feature_ratio(df)
 
-    # # (2) Featured Ratio by Top 10 Categories
+    # 2. Featured Ratio by Top 10 Categories
     analyze_top10_categories_feature_ratio(df)
 
-    # # (3) Image Count Influence
+    # 3. Image Count Influence
     analyze_image_influence(df)
 
-    # # (4) Video Presence Influence
+    # 4. Video Presence Influence
     analyze_video_influence_improved(df)
 
-    # # (5) Statistical Association between Video Presence and Featured Status
+    # 5. Statistical Association between Video Presence and Featured Status
     analyze_video_feature_association(df)
 
-    # # (6) Statistical Association between Image Count and Featured Status
+    # 6. Statistical Association between Image Count and Featured Status
     analyze_image_feature_association(df)
 
-    # # (7) Statistical Association between Image Count and Featured Status by Category
+    # 7. Statistical Association between Image Count and Featured Status by Category
     analyze_image_feature_association_by_category(df)
 
-    # # (8) Logistic Regression: Image Count Impact
+    # 8. Logistic Regression: Image Count Impact
     logistic_regression_image_featured(df)
 
-    # # (9) 曜日ごとの平均プロダクト数分析
+    # 9. Analyze Average Products and Featured Percentage per Weekday
     analyze_average_products_and_featured_percentage_per_weekday_dual_axis(df)
 
     # ---- Additional Analyses or Visualizations can be added here ----
